@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: minimalist-postgres
+    volumes:
+      - minimalist-psql:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: docker
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: .
+    container_name: minimalist-backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    environment:
+      - DB_URL=postgres://postgres:docker@minimalist-postgres:5432/postgres
+      - PORT=3000
+
+volumes:
+  minimalist-psql:
