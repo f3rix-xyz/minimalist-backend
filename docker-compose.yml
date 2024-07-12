@@ -23,6 +23,9 @@ services:
     environment:
       - DB_URL=postgres://postgres:docker@minimalist-postgres:5432/postgres
       - PORT=3000
+      - TWILIO_ACCOUNT_SID=ACa1f747e5cf0c5424e1ff7cb4724308c3
+      - TWILIO_SERVICE_SID=VAbce17841c3cef26fa19797e901527758
+      - TWILIO_AUTH_TOKEN=5b76ede3eff1fca9c5ad0e6901784c90
 
 volumes:
   minimalist-psql:
