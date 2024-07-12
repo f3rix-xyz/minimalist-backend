@@ -21,12 +21,12 @@ func main() {
 	r.POST("/reqOTP", controllers.ReqOTP)
 	r.POST("/createUser", controllers.CreateUser)
 	// Protected routes
+	r.POST("/login", controllers.Login)
 	protected := r.Group("/")
 	protected.Use(controllers.AuthMiddleware())
 	{
-		// protected.POST("/buy", Buy)
+		protected.POST("/buy", controllers.Buy)
 		// other protected routes
 	}
-	// r.POST("/login", controllers.Login)
 	r.Run() // listen and serve on 0.0.0.0:8080
 }

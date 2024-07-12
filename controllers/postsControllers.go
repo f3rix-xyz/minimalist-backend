@@ -134,7 +134,7 @@ func ReqOTP(c *gin.Context) {
 
 	client, serviceID, err := config.TwilioClient()
 	if err != nil {
-		log.Fatal(err.Error() + " can not find twilio env vars")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -173,32 +173,36 @@ func CreateUser(c *gin.Context) {
 
 	client, serviceID, err := config.TwilioClient()
 	if err != nil {
-		log.Fatal(err.Error() + " can not find twilio env vars")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	resp, err := client.VerifyV2.CreateVerificationCheck(serviceID, params)
 	if err != nil {
-		log.Fatal(err.Error() + " can not verify otp")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if *resp.Status != "approved" {
-
 		c.JSON(400, gin.H{"error": "OTP verification failed", "status": resp.Status})
 		return
 	} else {
 		post := models.User{Name: body.Name, Phone: body.Phone, SubscriptionValidTill: time.Now().AddDate(0, 1, 0)}
 		result := initializers.DB.Create(&post)
 		if result.Error != nil {
-			// If there was an error, respond with a 400 status code and the error message
 			c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"data": post})
 
+		// Create a token
+		token, err := createToken(post.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"data": post, "token": token})
 	}
-
 }
 
 func Login(c *gin.Context) {
@@ -217,9 +221,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	result := initializers.DB.Where("phone = ?", body.Phone).First(&models.User{})
-	if result.Error == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "User already present"})
+	var user models.User
+	result := initializers.DB.Where("phone = ?", body.Phone).First(&user)
+	if result.Error != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -229,27 +234,36 @@ func Login(c *gin.Context) {
 
 	client, serviceID, err := config.TwilioClient()
 	if err != nil {
-		log.Fatal(err.Error() + " can not find twilio env vars")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	resp, err := client.VerifyV2.CreateVerificationCheck(serviceID, params)
 	if err != nil {
-		log.Fatal(err.Error() + " can not verify otp")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if *resp.Status != "approved" {
-
 		c.JSON(400, gin.H{"error": "OTP verification failed", "status": resp.Status})
 		return
 	} else {
+		// Create a token
+		token, err := createToken(user.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+			return
+		}
 
-		c.JSON(http.StatusOK, gin.H{"data": "Login successful"})
-
+		c.JSON(http.StatusOK, gin.H{"data": "Login successful", "token": token})
 	}
-
 }
+
 func Hello(c *gin.Context) {
 	c.JSON(200, gin.H{"data": "Hello World"})
+}
+
+func Buy(c *gin.Context) {
+	user, _ := c.Get("user")
+	c.JSON(http.StatusOK, gin.H{"data": "You can buy now", "user": user})
 }
